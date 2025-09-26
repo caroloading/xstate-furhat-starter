@@ -2,6 +2,17 @@ import { setup, createActor, fromPromise, assign } from "xstate";
 
 const FURHATURI = "127.0.0.1:54321";
 
+async function fhVoice(name: string) {
+  const myHeaders = new Headers();
+  myHeaders.append("accept", "application/json");
+  const encName = encodeURIComponent(name);
+  return fetch(`http://${FURHATURI}/furhat/voice?name=${encName}`, {
+    method: "POST",
+    headers: myHeaders,
+    body: "",
+  });
+}
+
 async function fhSay(text: string) {
   const myHeaders = new Headers();
   myHeaders.append("accept", "application/json");
@@ -71,6 +82,9 @@ async function fhListen() {
 
 const dmMachine = setup({
   actors: {
+    fhVoice: fromPromise<any, null>(async () => {
+      return fhVoice("en-US-EchoMultilingualNeural");
+    }),
     fhHello: fromPromise<any, null>(async () => {
       return fhSay("Hi");
     }),
@@ -85,10 +99,10 @@ const dmMachine = setup({
     Start: { after: { 1000: "Next" } },
     Next: {
       invoke: {
-        src: "fhHello",
+        src: "fhHello",      
         input: null,
         onDone: {
-          target: "Recognised",
+          target: "Listen",
           actions: ({ event }) => console.log(event.output),
         },
         onError: {
@@ -97,7 +111,8 @@ const dmMachine = setup({
         },
       },
     },
-    Recognised: {},
+    Listen: {
+    },
     Fail: {},
   },
 });
@@ -108,3 +123,4 @@ console.log(actor.getSnapshot().value);
 actor.subscribe((snapshot) => {
   console.log(snapshot.value);
 });
+
