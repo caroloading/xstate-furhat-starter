@@ -317,7 +317,7 @@ const dmMachine = setup({
           {
           target: "Doubt",
           guard: ({event}) => event.output == "",
-          actions: ({ event }) => console.log(event.output),
+          actions: ({ event }) => console.log(event),
           },
           {
           target: "Surprise",
@@ -380,10 +380,6 @@ const dmMachine = setup({
           invoke: {
             src: "fhSurprise",
             input: null,
-            onDone: {
-              target: "#Pause",
-              actions: ({ event }) => console.log(event.output),
-            },
             onError: {
               target: "#Fail",
               actions: ({ event }) => console.error(event),
