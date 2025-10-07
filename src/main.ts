@@ -34,6 +34,70 @@ async function fhSay(text: string) {
   });
 }
 
+async function Hum(url: string) {
+  const myHeaders = new Headers();
+  myHeaders.append("accept", "application/json");
+  const encURL = encodeURIComponent(url);
+  return fetch(`http://${FURHATURI}/furhat/say?url=${url}&blocking=true`, {
+    method: "POST",
+    headers: myHeaders,
+    body: "",
+  });
+}
+
+async function LookDistracted() {
+  const myHeaders = new Headers();
+  myHeaders.append("accept", "application/json");
+  return fetch(`http://${FURHATURI}/furhat/gesture?blocking=false`, {
+    method: "POST",
+    headers: myHeaders,
+    body: JSON.stringify({
+      name: "LookDistracted",
+      frames: [
+        {
+          time: [0.50,1.0],
+          persist: false,
+          params: {
+            NECK_TILT: -10.0,
+            NECK_ROLL: -10.0,
+            SMILE_CLOSED: 0.3,
+            LOOK_UP: 0.6,
+            LOOK_RIGHT: 0.3
+          },
+        },
+        {
+          time: [1.10,1.60], 
+          persist: false,
+          params: {
+            NECK_TILT: -20.0,
+            SMILE_CLOSED: 0.3,
+            LOOK_UP: 0.7
+          },
+        },
+        {
+          time: [1.70,2.2], 
+          persist: false,
+          params: {
+            NECK_TILT: -20.0,
+            NECK_ROLL: 20.0,
+            SMILE_CLOSED: 0.3,
+            LOOK_UP: 0.6,
+            LOOK_LEFT: 0.3
+          },
+        },
+        {
+          time: [2.5], //ADD TIME FRAME IN WHICH YOUR GESTURE RESETS
+          persist: true,
+          params: {
+            reset: true,
+          },
+        },
+      ],
+      class: "furhatos.gestures.Gesture",
+    }),
+  });
+}
+
 async function LookDoubtful() {
   const myHeaders = new Headers();
   myHeaders.append("accept", "application/json");
@@ -63,13 +127,6 @@ async function LookDoubtful() {
           persist: true,
           params: {
             reset: true,
-          },
-        },
-        {
-          time: [0.0, 1.0], //ADD TIME FRAME IN WHICH YOUR GESTURE RESETS
-          persist: false,
-          params: {
-            audio: "https://github.com/caroloading/xstate-furhat-starter/blob/4e95d8644084b6c556691632d45effcbdf04804d/src/Whirring.mp3",
           },
         },
       ],
@@ -172,8 +229,14 @@ const dmMachine = setup({
     fhSurprise: fromPromise<any, null>(async () => {
      return LookSurprised();
     }),
+    fhDistracted: fromPromise<any, null>(async () => {
+     return LookDistracted();
+    }),
     fhAttend: fromPromise<any, null>(async () => {
       return fhAttend();
+    }),
+    fhHum: fromPromise<any, string>(async (input) => {
+      return Hum(input.input)
     })
   },
 }).createMachine({
@@ -203,8 +266,35 @@ const dmMachine = setup({
           },
         }
       },
-      after: { 1000: "Next" } },
+      after: { 1000: "Distracted" } },
+     Distracted:{
+      type: "parallel",
+      states: {
+        Face: {
+          invoke: {
+            src: "fhDistracted",
+            input: null,
+            onError: {
+              target: "#Fail",
+              actions: ({ event }) => console.error(event),
+            },
+          },
+          after: { 2500: "#Next" } ,
+        },
+        Hum: {
+          invoke: {
+            src: "fhHum",      
+            input: "https://github.com/caroloading/xstate-furhat-starter/raw/refs/heads/master/src/Whirring.wav",
+            onError: {
+              target: "#Fail",
+              actions: ({ event }) => console.error(event),
+            },
+          },
+        },
+      },
+    },
     Next: {
+      id: "Next",
       invoke: {
         src: "fhHello",      
         input: null,
@@ -267,7 +357,7 @@ const dmMachine = setup({
             },
           }
         },
-        /*Say: {
+        Say: {
           invoke: {
             src: "fhSpeak",      
             input: "I don't understand", 
@@ -280,7 +370,7 @@ const dmMachine = setup({
               actions: ({ event }) => console.error(event),
             },
           },
-        },*/
+        },
       },
     },
     Surprise:{
@@ -291,7 +381,7 @@ const dmMachine = setup({
             src: "fhSurprise",
             input: null,
             onDone: {
-              target: "#Goodbye",
+              target: "#Pause",
               actions: ({ event }) => console.log(event.output),
             },
             onError: {
@@ -304,6 +394,10 @@ const dmMachine = setup({
           invoke: {
             src: "fhSpeak",      
             input: "Oh! You asked my name! My name is Kione.",
+            onDone: {
+              target: "#Pause",
+              actions: ({ event }) => console.log(event.output),
+            },
             onError: {
               target: "#Fail",
               actions: ({ event }) => console.error(event),
@@ -312,11 +406,15 @@ const dmMachine = setup({
         }
       }
     },
+    Pause: {
+      id: "Pause",
+      after: { 2000: "Goodbye" } 
+    },
     Goodbye: {
       id: "Goodbye",
       invoke: {
         src: "fhSpeak",      
-        input: "Oh! You asked my name! My name is Kione.",
+        input: "See you later!",
         onError: {
               target: "#Fail",
               actions: ({ event }) => console.error(event),
