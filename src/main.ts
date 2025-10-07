@@ -215,7 +215,7 @@ const dmMachine = setup({
       return fhVoice("en-US-EchoMultilingualNeural");
     }),
     fhHello: fromPromise<any, null>(async () => {
-      return fhSay("Hi");
+      return fhSay("Oh, hi!");
     }),
     fhSpeak: fromPromise<any, string>(async (input) => {
       return fhSay(input.input);
@@ -360,7 +360,7 @@ const dmMachine = setup({
         Say: {
           invoke: {
             src: "fhSpeak",      
-            input: "I don't understand", 
+            input: "I don't understand.", 
             onDone: {
                 target: "#Listen",
                 actions: ({ event }) => console.log(event.output),
